@@ -6,16 +6,8 @@ def next_centroid(cluster):
     return tuple(np.mean(cluster, axis=0))
 
 
-def distance(centroid, sample):
-    return np.linalg.norm(np.subtract(centroid, sample))
-
-
-def next_centroid(cluster):
-    return tuple(np.mean(cluster, axis=0))
-
-
-def distance(centroid, sample):
-    return np.linalg.norm(np.subtract(centroid, sample))
+def distance(centroids, sample):
+    return np.linalg.norm(np.subtract(centroids, sample), axis=1)
 
 
 class KMeansModel:
@@ -35,13 +27,14 @@ class KMeansModel:
             new_clusters = [[] for _ in range(len(self.clusters))]
 
             for sample in samples:
-                closest_centroid = self._closest_centroid(sample)
-                new_clusters[closest_centroid].append(sample)
+                closest_centroid_idx = self._closest_centroid(sample)
+                new_clusters[closest_centroid_idx].append(sample)
 
-                if not np.isin(sample, old_clusters[closest_centroid]).any():
+            self.clusters = np.array(new_clusters, dtype="object")
+
+            for i in range(len(new_clusters)):
+                if not np.isin(new_clusters[i], old_clusters[i]).all():
                     reassignment = True
-
-            self.clusters = new_clusters
 
             for i in range(len(self.centroids)):
                 self.centroids[i] = next_centroid(self.clusters[i])
@@ -49,14 +42,7 @@ class KMeansModel:
             j += 1
 
     def _closest_centroid(self, sample):
-        min_dist = distance(self.centroids[0], sample)
-        closest_centroid = 0
-        for i in range(1, len(self.centroids)):
-            current_dist = distance(self.centroids[i], sample)
-            if min_dist > current_dist:
-                min_dist = current_dist
-                closest_centroid = i
-        return closest_centroid
+        return distance(self.centroids, sample).argmin()
 
     def train(self, samples, n_clusters, max_iter, initial_centroids=None):
         if len(samples) == 0:
@@ -65,7 +51,6 @@ class KMeansModel:
         if initial_centroids is not None:
             self.centroids = initial_centroids
         else:
-
             self.centroids = samples[np.random.choice(np.arange(len(samples)), n_clusters, replace=False)]
 
         if self.clusters is None:
